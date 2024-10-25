@@ -1,0 +1,6 @@
+{
+  "solidity.formatter": "forge",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  }
+}
