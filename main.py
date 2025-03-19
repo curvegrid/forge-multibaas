@@ -209,15 +209,17 @@ def create_address(
 
     # Generate a unique address alias if the default is conflicting
     if address_alias == contract_label:
-        # Check for similar labels and generate a new one if necessary
-        similar_labels = mb_request(
+        # Retrieve all addresses and extract aliases
+        all_addresses = mb_request(
             mb_url,
             mb_api_key,
-            f"/chains/ethereum/addresses/similarlabels/{contract_label}",
+            "/chains/ethereum/addresses",
         )
-        similar_set = set(label_info["label"] for label_info in similar_labels)
-        if contract_label in similar_set:
-            # Add a numeric suffix to create a unique label
+        similar_set = set(addr["alias"] for addr in all_addresses if "alias" in addr)
+        if contract_label not in similar_set:
+            address_alias = contract_label
+        else:
+            # Add a numeric suffix to create a unique alias
             num = 2
             while f"{contract_label}{num}" in similar_set:
                 num += 1
