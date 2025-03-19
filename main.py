@@ -207,27 +207,24 @@ def create_address(
             raise  # Re-raise exception if it's not a 404 Not Found error
         # If the address is not found (404), proceed to create the address
 
-    # Generate a unique address alias if the default is conflicting
-    if address_alias == contract_label:
-        # Retrieve all addresses and extract aliases
+    # If no alias was provided, attempt to use the contract_label, then fall back to label2, label3, etc.
+    if not address_alias:
         all_addresses = mb_request(
             mb_url,
             mb_api_key,
             "/chains/ethereum/addresses",
         )
-        similar_set = set(addr["alias"] for addr in all_addresses if "alias" in addr)
-        if contract_label not in similar_set:
-            address_alias = contract_label
-        else:
-            # Add a numeric suffix to create a unique alias
-            num = 2
-            while f"{contract_label}{num}" in similar_set:
-                num += 1
-            address_alias = f"{contract_label}{num}"
+        existing_aliases = set(addr["alias"] for addr in all_addresses if "alias" in addr)
+        proposed_alias = contract_label
+        suffix = 2
+        while proposed_alias in existing_aliases:
+            proposed_alias = f"{contract_label}{suffix}"
+            suffix += 1
+        address_alias = proposed_alias
     else:
+        # The user explicitly supplied an alias. If it already exists, check if we're allowed to delete it.
         try:
-            # Check if the alias already exists
-            result = mb_request(
+            existing_alias_info = mb_request(
                 mb_url, mb_api_key, f"/chains/ethereum/addresses/{address_alias}"
             )
 
@@ -237,24 +234,17 @@ def create_address(
                     409,
                     f"Another address has already been created under the alias '{address_alias}'",
                 )
-
-            # If allow_update_address is True, delete the conflicting address
-            if result and result.get("address", "") != "":
-                old_address = result["address"]
-                print(
-                    f"Deleting old address {old_address} with alias '{address_alias}'"
-                )
-                mb_request(
-                    mb_url,
-                    mb_api_key,
-                    f"/chains/ethereum/addresses/{address_alias}",
-                    method="DELETE",
-                )
-
+            old_address = existing_alias_info["address"]
+            print(f"Deleting old address {old_address} with alias '{address_alias}'")
+            mb_request(
+                mb_url,
+                mb_api_key,
+                f"/chains/ethereum/addresses/{address_alias}",
+                method="DELETE",
+            )
         except MultiBaasAPIError as e:
             if e.status_code != 404:
                 raise  # Re-raise exception if it's not a 404 Not Found error
-            # If the alias is not found (404), proceed to create the address
 
     # Create the new address
     print(f"Creating address {address} with alias '{address_alias}'")
