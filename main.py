@@ -207,10 +207,8 @@ def create_address(
             raise  # Re-raise exception if it's not a 404 Not Found error
         # If the address is not found (404), proceed to create the address
 
-    # If no alias was provided, attempt to use the contract_label, then fall back to label2, label3, etc.
-    print(f"Address alias set to {address_alias}'")
-
     if not address_alias:
+        # If no alias was provided, attempt to use the contract_label, then fall back to label2, label3, etc.
         all_addresses = mb_request(
             mb_url,
             mb_api_key,
@@ -491,6 +489,7 @@ def upload_and_link_contract(
     mb_address = create_address(
         mb_url, mb_api_key, contract_address, contract_label, address_alias
     )
+    print(f"Address created successfully: {mb_address}")
     if not mb_address:
         print("Error: Failed to create address. Stopping execution.")
         return
