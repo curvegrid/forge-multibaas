@@ -9,20 +9,20 @@ library MultiBaas {
 
     // Encode options for uploading and linking a contract MultiBaas
     // @param contractLabel: Label for the contract. Defaults to contract name if empty
-    // @param addressAlias: Alias for the deployed contract address. Defaults to contract name if empty
-    // @param contractVersion: Version string for the contract. Defaults to 1.0 and auto increments if empty
+    // @param addressLabel: Label for the contract address. Defaults to contract name if empty
+    // @param contractVersion: Version label for the contract. Defaults to 1.0 and auto increments if empty
     // @param startingBlock: From which block to start syncing events. Defaults to -100. If a negative value, it represents blocks before the current block. If a positive value, it represents the absolute block number. If 0, it represents the latest block.
     function withOptions(
         string memory contractLabel,
-        string memory addressAlias,
+        string memory addressLabel,
         string memory contractVersion,
         string memory startingBlock
     ) internal pure returns (bytes memory encodedOptions) {
         encodedOptions = abi.encodePacked(
             '{"contractLabel":"',
             contractLabel,
-            '","addressAlias":"',
-            addressAlias,
+            '","addressLabel":"',
+            addressLabel,
             '","contractVersion":"',
             contractVersion,
             '","startingBlock":"',

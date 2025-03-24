@@ -42,7 +42,7 @@ The library requires certain environment variables to be defined:
 Optionally, the following variables can be set to bypass safeguards:
 
 - `MULTIBAAS_ALLOW_UPDATE_CONTRACT=true`: Allows contracts to be reuploaded and labelled as an already existing version in MultiBaas, even if the bytecode changes.
-- `MULTIBAAS_ALLOW_UPDATE_ADDRESS=true`: Allows addresses to be updated in MultiBaas if the address alias conflicts.
+- `MULTIBAAS_ALLOW_UPDATE_ADDRESS=true`: Allows addresses to be updated in MultiBaas if the address label conflicts.
 
 If you choose to set these variables using an `.env` file, since the `MULTIBAAS_API_KEY` grants full admin access to the MultiBaas deployment, we strongly advise against checking it into source control.
 
@@ -79,8 +79,8 @@ contract CounterScript is Script {
         // Upload and link the second contract in MultiBaas with custom options
         bytes memory encodedOptions = MultiBaas.withOptions(
             "counter", // Arbitrary MultiBaas label for the uploaded contract code and associated ABI
-            "counter", // Arbitrary MultiBaas alias for the address at which the contract is deployed
-            "1.5", // Arbitrary MultiBaas version string for the uploaded contract code and associated ABI
+            "counter", // Arbitrary MultiBaas label for the address at which the contract is deployed
+            "1.5", // Arbitrary MultiBaas version label for the uploaded contract code and associated ABI
             "-50" // Start syncing events from 50 blocks prior to the current network block
         );
         MultiBaas.linkContractWithOptions("Counter", address(secondCounter), encodedOptions);
@@ -114,8 +114,8 @@ The `forge-multibaas` library provides the following key functions:
 ```solidity
 bytes memory encodedOptions = MultiBaas.withOptions(
     "custom_contract_label", // Arbitrary MultiBaas label for the uploaded contract code and associated ABI
-    "custom_address_alias", // Arbitrary MultiBaas alias for the address at which the contract is deployed
-    "1.0", // Arbitrary MultiBaas version string for the uploaded contract code and associated ABI
+    "custom_address_label", // Arbitrary MultiBaas label for the address at which the contract is deployed
+    "1.0", // Arbitrary MultiBaas version label for the uploaded contract code and associated ABI
     "-100" // Start syncing events from 100 blocks prior to the current network block
 );
 MultiBaas.linkContractWithOptions("MyContract", address(myContract), encodedOptions);
@@ -126,6 +126,6 @@ MultiBaas.linkContractWithOptions("MyContract", address(myContract), encodedOpti
 You can customize the following options when linking contracts:
 
 - **`contractLabel`**: The label for the contract. Defaults to the contract name in lowercase.
-- **`addressAlias`**: The alias for the deployed contract address. Defaults to the contract name in lowercase.
-- **`contractVersion`**: The version string for the contract. Defaults to `1.0` and if left empty it auto-increments as the contract bytecode changes. If it is set to a version string that is already uploaded to MultiBaas, but the contract bytecode has changed, then the `MULTIBAAS_ALLOW_UPDATE_CONTRACT` environment variable must be set to `true` to allow for the version string to be reused on the new contract bytecode.
+- **`addressLabel`**: The label for the contract address. Defaults to the contract name in lowercase.
+- **`contractVersion`**: The version label for the contract. Defaults to `1.0` and if left empty it auto-increments as the contract bytecode changes. If it is set to a version string that is already uploaded to MultiBaas, but the contract bytecode has changed, then the `MULTIBAAS_ALLOW_UPDATE_CONTRACT` environment variable must be set to `true` to allow for the version label to be reused on the new contract bytecode.
 - **`startingBlock`**: The block number from which to start syncing events in MultiBaas. Negative values represent blocks before the current block; non-negative values represent absolute block numbers on the blockchain. `"latest"` represents the current block. If unspecified, it defaults to `"-100"`.
