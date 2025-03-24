@@ -489,7 +489,6 @@ def upload_and_link_contract(
     mb_address = create_address(
         mb_url, mb_api_key, contract_address, contract_label, address_alias
     )
-    print(f"Address created successfully: {mb_address}")
     if not mb_address:
         print("Error: Failed to create address. Stopping execution.")
         return
@@ -501,7 +500,7 @@ def upload_and_link_contract(
             mb_api_key,
             contract_label,
             mb_contract.get("version"),
-            address_alias,
+            mb_address.get("alias"),
             starting_block,
         )
         print("Contract linked successfully.")
