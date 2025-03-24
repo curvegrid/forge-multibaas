@@ -471,7 +471,7 @@ def upload_and_link_contract(
     """
     contract_label = options.get("contractLabel", contract_name.lower())
     contract_version = options.get("contractVersion", None)
-    address_alias = options.get("addressAlias", contract_label)
+    address_alias = options.get("addressAlias", None)
     starting_block = options.get("startingBlock", "-100")
 
     # Create the contract
