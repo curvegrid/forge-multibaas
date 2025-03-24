@@ -164,17 +164,17 @@ def validate_api_key(mb_url: str, mb_api_key: str) -> bool:
 
 
 def create_address(
-    mb_url: str, mb_api_key: str, address: str, contract_label: str, address_label: str
+    mb_url: str, mb_api_key: str, address: str, contract_label: str, address_alias: str
 ) -> Optional[Dict]:
     """
-    Creates an address in MultiBaas, handling label conflicts and updates.
+    Creates an address in MultiBaas, handling alias conflicts and updates.
 
     Args:
         mb_url (str): The MultiBaas URL.
         mb_api_key (str): The API key for authentication.
         address (str): The Ethereum address to create.
         contract_label (str): The label for the contract.
-        address_label (str): The label for the address.
+        address_alias (str): The alias for the address.
 
     Returns:
         Optional[Dict]: The created address information or None if failed.
@@ -188,18 +188,18 @@ def create_address(
         # Check if the address already exists
         result = mb_request(mb_url, mb_api_key, f"/chains/ethereum/addresses/{address}")
 
-        # If the address exists, handle any conflicting labels
-        if result and result.get("label", "") != "":
-            existing_label = result["label"]
+        # If the address exists, handle any conflicting aliases
+        if result and result.get("alias", "") != "":
+            existing_alias = result["alias"]
 
-            if existing_label != address_label:
+            if existing_alias != address_alias:
                 raise MultiBaasAPIError(
                     f"/chains/ethereum/addresses/{address}",
                     409,
-                    f"The address {address} has already been created under a different label '{existing_label}'",
+                    f"The address {address} has already been created under a different alias '{existing_alias}'",
                 )
 
-            print(f"Address {address} already created as '{existing_label}'")
+            print(f"Address {address} already created as '{existing_alias}'")
             return result
 
     except MultiBaasAPIError as e:
@@ -207,58 +207,50 @@ def create_address(
             raise  # Re-raise exception if it's not a 404 Not Found error
         # If the address is not found (404), proceed to create the address
 
-    # Generate a unique address label if the default is conflicting
-    if address_label == contract_label:
-        # Check for similar labels and generate a new one if necessary
-        similar_labels = mb_request(
+    if not address_alias:
+        # If no alias was provided, attempt to use the contract_label, then fall back to label2, label3, etc.
+        all_addresses = mb_request(
             mb_url,
             mb_api_key,
-            f"/chains/ethereum/addresses/similarlabels/{contract_label}",
+            "/chains/ethereum/addresses",
         )
-        similar_set = set(label_info["label"] for label_info in similar_labels)
-        if contract_label in similar_set:
-            # Add a numeric suffix to create a unique label
-            num = 2
-            while f"{contract_label}{num}" in similar_set:
-                num += 1
-            address_label = f"{contract_label}{num}"
+        existing_aliases = set(addr["alias"] for addr in all_addresses if "alias" in addr)
+        proposed_alias = contract_label
+        suffix = 2
+        while proposed_alias in existing_aliases:
+            proposed_alias = f"{contract_label}{suffix}"
+            suffix += 1
+        address_alias = proposed_alias
     else:
+        # The user explicitly supplied an alias. If it already exists, check if we're allowed to delete it.
         try:
-            # Check if the label already exists
-            result = mb_request(
-                mb_url, mb_api_key, f"/chains/ethereum/addresses/{address_label}"
+            existing_alias_info = mb_request(
+                mb_url, mb_api_key, f"/chains/ethereum/addresses/{address_alias}"
             )
 
             if not allow_update_address:
                 raise MultiBaasAPIError(
-                    f"/chains/ethereum/addresses/{address_label}",
+                    f"/chains/ethereum/addresses/{address_alias}",
                     409,
-                    f"Another address has already been created under the label '{address_label}'",
+                    f"Another address has already been created under the alias '{address_alias}'",
                 )
-
-            # If allow_update_address is True, delete the conflicting address
-            if result and result.get("address", "") != "":
-                old_address = result["address"]
-                print(
-                    f"Deleting old address {old_address} with label '{address_label}'"
-                )
-                mb_request(
-                    mb_url,
-                    mb_api_key,
-                    f"/chains/ethereum/addresses/{address_label}",
-                    method="DELETE",
-                )
-
+            old_address = existing_alias_info["address"]
+            print(f"Deleting old address {old_address} with alias '{address_alias}'")
+            mb_request(
+                mb_url,
+                mb_api_key,
+                f"/chains/ethereum/addresses/{address_alias}",
+                method="DELETE",
+            )
         except MultiBaasAPIError as e:
             if e.status_code != 404:
                 raise  # Re-raise exception if it's not a 404 Not Found error
-            # If the label is not found (404), proceed to create the address
 
     # Create the new address
-    print(f"Creating address {address} with label '{address_label}'")
+    print(f"Creating address {address} with alias '{address_alias}'")
     data = {
         "address": address,
-        "label": address_label,
+        "alias": address_alias,
     }
     try:
         created_address = mb_request(
@@ -424,7 +416,7 @@ def link_contract_to_address(
     mb_api_key: str,
     contract_label: str,
     contract_version: Optional[str],
-    address_label: str,
+    address_alias: str,
     starting_block: str,
 ) -> None:
     """
@@ -435,7 +427,7 @@ def link_contract_to_address(
         mb_api_key (str): The API key for authentication.
         contract_label (str): The label of the contract.
         contract_version (str, optional): The version of the contract.
-        address_label (str): The label of the address.
+        address_alias (str): The alias of the address.
         starting_block (str): The starting block for event syncing.
     """
     data = {
@@ -447,7 +439,7 @@ def link_contract_to_address(
         mb_request(
             mb_url,
             mb_api_key,
-            f"/chains/ethereum/addresses/{address_label}/contracts",
+            f"/chains/ethereum/addresses/{address_alias}/contracts",
             method="POST",
             data=data,
         )
@@ -473,11 +465,11 @@ def upload_and_link_contract(
         artifact_dir (str): The directory where artifacts are stored.
         contract_name (str): The name of the contract.
         contract_address (str): The Ethereum address of the contract.
-        options (dict): Additional options for contract and address labeling.
+        options (dict): Additional options for contract labeling and address aliasing.
     """
     contract_label = options.get("contractLabel", contract_name.lower())
     contract_version = options.get("contractVersion", None)
-    address_label = options.get("addressLabel", contract_label)
+    address_alias = options.get("addressAlias", None)
     starting_block = options.get("startingBlock", "-100")
 
     # Create the contract
@@ -495,7 +487,7 @@ def upload_and_link_contract(
 
     # Create the address
     mb_address = create_address(
-        mb_url, mb_api_key, contract_address, contract_label, address_label
+        mb_url, mb_api_key, contract_address, contract_label, address_alias
     )
     if not mb_address:
         print("Error: Failed to create address. Stopping execution.")
@@ -508,7 +500,7 @@ def upload_and_link_contract(
             mb_api_key,
             contract_label,
             mb_contract.get("version"),
-            address_label,
+            mb_address.get("alias"),
             starting_block,
         )
         print("Contract linked successfully.")
