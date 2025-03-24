@@ -208,6 +208,8 @@ def create_address(
         # If the address is not found (404), proceed to create the address
 
     # If no alias was provided, attempt to use the contract_label, then fall back to label2, label3, etc.
+    print(f"Address alias set to {address_alias}'")
+
     if not address_alias:
         all_addresses = mb_request(
             mb_url,
